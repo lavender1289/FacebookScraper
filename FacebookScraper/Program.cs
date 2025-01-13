@@ -64,7 +64,7 @@ class FacebookScraper
     {
 
         // Navigate to the Facebook group
-        driver.Navigate().GoToUrl("https://www.facebook.com/groups/1826285257467256/");
+        driver.Navigate().GoToUrl("https://www.facebook.com/groups/1376835879252532");
         Thread.Sleep(5000);
     }
     public void GetPosts1()
@@ -100,54 +100,43 @@ class FacebookScraper
             var posts = driver.FindElements(By.XPath("//div[@data-ad-rendering-role='story_message']")).ToList();
 
             // Kiểm tra bài viết mới
-            foreach (var post in posts)
+            for (int j = 0; j < posts.Count; j++)
             {
+
+
                 try
                 {
-                    Thread.Sleep(2000);
                     // Get post ID using the aria-labelledby attribute
-                    var postIdElement = post.FindElement(By.XPath(".//ancestor::div[@aria-labelledby]"));
+                    ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", posts[j]);
+                    var postIdElement = posts[j].FindElement(By.XPath(".//ancestor::div[@aria-labelledby]"));
                     var postId = postIdElement.GetDomAttribute("aria-labelledby");
 
                     if (string.IsNullOrEmpty(postId) || postIds.Contains(postId))
                     {
+
                         continue; // Skip posts that have already been processed
                     }
 
                     // Add the post ID to the HashSet to avoid duplicates
                     postIds.Add(postId);
 
-                    // Extract the post content before click see more(using a selector for post text)
-                    var content = post.Text;
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        postContents.Add(content); // Add the content to HashSet
-                        Console.WriteLine("Post Found in brief: " + postContents.Count);
-                        Console.WriteLine(content);
-                        Console.WriteLine("---------------------------------------------------");
-                    }
-
                     // Find and click the "See More" button if available
-                    var seeMoreButtons = post.FindElements(By.XPath(".//div[contains(text(), 'Xem thêm') or contains(text(), 'See More')]"));
-
-                    if (seeMoreButtons.Count > 0) // If "See More" button is found
+                    var seeMoreButtons = posts[j].FindElements(By.XPath(".//div[contains(text(), 'Xem thêm') or contains(text(), 'See More')]"));
+                    if (seeMoreButtons.Count > 0)
                     {
                         // Scroll the element into view with an offset
                         ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", seeMoreButtons[0]);
                         // Inside the GetPosts2_GetFullContent method, replace the problematic line with the following code
                         var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
                         var seeMoreButton = wait.Until(ExpectedConditions.ElementToBeClickable(By.XPath(".//div[contains(text(), 'Xem thêm') or contains(text(), 'See More')]")));
-                        Thread.Sleep(1000);
                         ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", seeMoreButton);
-                        Thread.Sleep(1000); // Wait for the expanded content to load
                     }
 
                     // Extract the post content (using a selector for post text)
-                    Thread.Sleep(2000);
-                    content = post.Text;
+                    var content = posts[j].Text;
                     if (!string.IsNullOrEmpty(content))
                     {
-                        //postContents.Add(content); // Add the content to HashSet
+                        postContents.Add(content); // Add the content to HashSet
                         Console.WriteLine("Post Found: " + postContents.Count);
                         Console.WriteLine(content);
                         Console.WriteLine("---------------------------------------------------");
@@ -155,12 +144,11 @@ class FacebookScraper
                 }
                 catch (NoSuchElementException)
                 {
-                    // Bỏ qua nếu không tìm thấy nội dung bài viết hoặc nút "Xem thêm"
+         
                 }
                 catch (StaleElementReferenceException)
                 {
-                    // Re-locate the element and retry
-                    continue;
+                      continue;
                 }
             }
 
