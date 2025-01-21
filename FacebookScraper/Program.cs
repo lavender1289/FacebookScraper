@@ -1,7 +1,9 @@
-﻿using OpenQA.Selenium;
+﻿using Newtonsoft.Json;
+using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
+using System;
 using System.Drawing;
 using System.Text;
 
@@ -10,23 +12,40 @@ class FacebookScraper
 {
     private static IWebDriver driver;
     private List<string> posts;
-
+    string environment;
     public FacebookScraper()
     {
-        var options = new ChromeOptions();
+        //Read the config file
+        environment = Environment.GetEnvironmentVariable("Environment");
+        string jsonConfig = File.ReadAllText("config.json");
+        dynamic configJson = JsonConvert.DeserializeObject(jsonConfig);
+        var config = environment == "Work" ? configJson.work : configJson.home;
 
+
+        //Setup driver
+        var options = new ChromeOptions();
         options.AddArgument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36");
         options.AddExcludedArgument("enable-automation");
         options.AddAdditionalOption("useAutomationExtension", false);
-        options.AddArgument(@"user-data-dir=C:\Users\PC\AppData\Local\Google\Chrome\User Data\");
-        options.AddArgument("profile-directory=Profile 11");
+        var userDataDir = config.userDataDir;
+        var profile = config.profile;
+        options.AddArgument($"user-data-dir={config.userDataDir}");
+        options.AddArgument($"profile-directory={config.profile}");
 
         driver = new ChromeDriver(options);
+                
+        if (environment == "Home")
+        {
+            int screenWidth = 1920;
+            int screenHeight = 1080;
+            driver.Manage().Window.Size = new Size(screenWidth / 2, screenHeight);
+            driver.Manage().Window.Position = new Point(screenWidth / 2, 0);
+        }
+        else
+        {
+            driver.Manage().Window.FullScreen();
+        }
 
-        int screenWidth = 1920;
-        int screenHeight = 1080;
-        driver.Manage().Window.Size = new Size(screenWidth / 2, screenHeight); // Nửa màn hình
-        driver.Manage().Window.Position = new Point(screenWidth / 2, 0);
         posts = new List<string>();
     }
 
@@ -34,13 +53,19 @@ class FacebookScraper
     {
         var scraper = new FacebookScraper();
         driver.Navigate().GoToUrl("https://www.facebook.com/");
+     
 
         //scraper.Login();
         scraper.GoToGroup();
 
+        if (scraper.environment == "Work")
+        {
+            driver.Manage().Window.FullScreen();
+        }
+
         //Encoding for console
         Console.OutputEncoding = Encoding.UTF8;
-        scraper.GetPosts2_GetFullContent();
+        scraper.GetPosts1();
 
         Console.WriteLine("----------------------------------------------");
         Console.WriteLine("Posts found: " + scraper.posts.Count);
@@ -67,6 +92,9 @@ class FacebookScraper
         driver.Navigate().GoToUrl("https://www.facebook.com/groups/1376835879252532");
         Thread.Sleep(5000);
     }
+
+    //Get posts without full content
+    //Not all posts are get
     public void GetPosts1()
     {
         for (int i = 0; i < 10; i++) // Adjust for number of scrolls
@@ -89,6 +117,9 @@ class FacebookScraper
             Thread.Sleep(3000);
         }
     }
+
+    //Get posts with full content
+    //Not all posts are get
     public void GetPosts2_GetFullContent()
     {
         // Danh sách để lưu nội dung bài viết
